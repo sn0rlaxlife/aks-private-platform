@@ -32,7 +32,7 @@ resource "azurerm_virtual_machine" "bastion_host" {
         disable_password_authentication = true
 
         ssh_keys {
-            path     = "/home/rodrigtech/.ssh/authorized_keys"
+            path     = "~/.ssh/authorized_keys"
             key_data = file("~/.ssh/id_rsa.pub") # replace with the path to your public key
         }
     }
