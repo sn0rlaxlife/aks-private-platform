@@ -4,8 +4,21 @@ data "azurerm_kubernetes_service_versions" "current" {
   include_preview = true
 }
 
-
 # Path: aks.tf
+resource "azurerm_user_assigned_identity" "aks" {
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  name                = "aks-identity"
+}
+
+data "azurerm_subscription" "current" {}
+
+resource "azurerm_role_assignment" "aks_network_contributor" {
+  scope                =   "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.subnet_name}" 
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks.principal_id
+
+}
 
 # Define the AKS Cluster
 resource "azurerm_kubernetes_cluster" "aks" {
@@ -15,9 +28,10 @@ resource "azurerm_kubernetes_cluster" "aks" {
   node_resource_group = "${azurerm_resource_group.rg.name}-aks"
   kubernetes_version  = data.azurerm_kubernetes_service_versions.current.latest_version
 
-  dns_prefix              = "platform-k8s"
-  private_cluster_enabled = true
-
+  dns_prefix                = "platform-k8s"
+  private_cluster_enabled   = true
+  workload_identity_enabled = true
+  oidc_issuer_enabled       = true
   default_node_pool {
     name                = "default"
     node_count          = 1
@@ -30,10 +44,12 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
   api_server_access_profile {
     vnet_integration_enabled = true
+    subnet_id                = azurerm_subnet.aks_subnet_network.id
   }
 
   identity {
-    type = "SystemAssigned"
+    type = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.aks.id]
   }
   network_profile {
     network_plugin    = "azure"
