@@ -27,6 +27,25 @@ After you are in the directory if you don't have the preview enabled the followi
 chmod +x ./preview.sh
 ./preview.sh
 ```
+You will also need 'Microsoft.ContainerService' registered
+```shell
+chmod +x ./container.sh
+./container.sh
+```
 
 Let this command run until it reflects registered back as output then you can use the repository further.
+
+To run this ideally you'll have your terraform resources scanned prior to moving into production to ensure this meets your benchmarks, you can use Github Actions to push to Azure as well with running scans open-source such as tfsec is ran in the actions tab.
+```shell
+terraform init
+```
+Then once this runs we initialized our repository, you can now also run the planning phase to ensure we have everything properly set and catch any errors.
+```shell
+terraform plan -o aks.out
+```
+
+If this doesn't show any errors run the following
+```shell
+terraform apply
+```
 
