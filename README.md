@@ -1,6 +1,9 @@
 # AKS Private Platform
 Deployment of AKS with API Server Integration leveraging Private Endpoints
 
+## Reference Architecture ##
+<img src="https://github.com/sn0rlaxlife/aks-private-platform/blob/main/ref.png"> 
+
 ## How to use this repository ##
 Clone the repository
 ```shell
