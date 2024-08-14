@@ -109,19 +109,59 @@ resource "azurerm_network_security_group" "nsg" {
 
 
 # Define the network security group rule
-resource "azurerm_network_security_rule" "nsg-rule" {
+resource "azurerm_network_security_rule" "aks-subnet-to-bastion" {
   name                        = "AllowInbound"
   priority                    = 1001
   direction                   = "Inbound"
   access                      = "Allow"
   protocol                    = "Tcp"
-  source_port_range           = "*"
-  destination_port_range      = "*"
-  source_address_prefix       = "*"
-  destination_address_prefix  = "*"
+  source_port_range           = "*" # Recommend to have this as * for all ports the destination port acts as filter range
+  destination_port_range      = "443"
+  source_address_prefix       = azurerm_subnet.subnet.address_prefixes[0]
+  destination_address_prefix  = azurerm_subnet.bastion_host_subnet.address_prefixes[0]
   resource_group_name         = azurerm_resource_group.rg.name
   network_security_group_name = azurerm_network_security_group.nsg.name
 }
+resource "azurerm_network_security_rule" "bastion_to_aks" {
+  name                        = "AllowOutboundToAKS"
+  priority                    = 1002
+  direction                   = "Outbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "443"
+  source_address_prefix       = azurerm_subnet.bastion_host_subnet.address_prefixes[0]
+  destination_address_prefix  = azurerm_subnet.subnet.address_prefixes[0]
+  resource_group_name         = azurerm_resource_group.rg.name
+  network_security_group_name = azurerm_network_security_group.nsg.name
+}
+
+resource "azurerm_network_security_rule" "aks_from_bastion" {
+  name                        = "AllowInboundFromBastion"
+  priority                    = 1003
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "443"
+  source_address_prefix       = azurerm_subnet.bastion_host_subnet.address_prefixes[0]
+  destination_address_prefix  = azurerm_subnet.aks_subnet_network.address_prefixes[0]
+  resource_group_name         = azurerm_resource_group.rg.name
+  network_security_group_name = azurerm_network_security_group.nsg.name
+}
+
+# Associate with the subnet_network_security_group association with our bastion_host_subnet since this houses the machine
+resource "azurerm_subnet_network_security_group_association" "bastion_nsg_association" {
+  subnet_id                 = azurerm_subnet.bastion_host_subnet.id
+  network_security_group_id = azurerm_network_security_group.nsg.id
+}
+
+# Associate the aks subnet with the network security group
+resource "azurerm_subnet_network_security_group_association" "aks_nsg_association" {
+  subnet_id                 = azurerm_subnet.aks_subnet_network.id
+  network_security_group_id = azurerm_network_security_group.nsg.id
+}
+
 
 # Define a separate v-net for our bastion host
 resource "azurerm_virtual_network" "bastion_vnet" {
@@ -233,3 +273,4 @@ module "bastion_host" {
   vnet_aks_name       = azurerm_virtual_network.vnet.name
   vnet_aks_id         = azurerm_virtual_network.vnet.id
 }
+
