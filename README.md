@@ -43,9 +43,24 @@ Then once this runs we initialized our repository, you can now also run the plan
 ```shell
 terraform plan -o aks.out
 ```
+Since this requires a input of subscription id you'll need to supply .tfvars
+```shell
+nano terraform.tfvars
+subscription_id = "<>"
+```
+
 
 If this doesn't show any errors run the following
 ```shell
 terraform apply
 ```
+Important to note to talk to the AKS API-Server via this integration the last step to do this is peering the DNS Private Link Zone to the Bastion V-NET 
+```shell
+nano dnspeer.sh
+edit this script with the generated AKS DNS zone this is annotated in the cluster
+chmod +x dnspeer.sh
+./dnspeer.sh
+```
+
+This should result in the ability to talk to the API Server via the Bastion Host (privately accessing the AKS cluster via a jumpbox)
 
