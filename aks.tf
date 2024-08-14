@@ -13,8 +13,17 @@ resource "azurerm_user_assigned_identity" "aks" {
 
 data "azurerm_subscription" "current" {}
 
+# Assign role to subnet for AKS API Server
 resource "azurerm_role_assignment" "aks_network_contributor" {
   scope                =   "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.subnet_name}" 
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks.principal_id
+
+}
+
+# Assign role to subnet of AKS for troubleshooting
+resource "azurerm_role_assignment" "aks_network_contributor_nodepool" {
+  scope                =   "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.subnet_name_aks}" 
   role_definition_name = "Network Contributor"
   principal_id         = azurerm_user_assigned_identity.aks.principal_id
 
@@ -42,6 +51,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     max_count           = 3
     vnet_subnet_id      = azurerm_subnet.subnet.id
   }
+  # This portion of the subnet isn't associated with the gateway for outbound this has to peer with the subnet that has the gateway
   api_server_access_profile {
     vnet_integration_enabled = true
     subnet_id                = azurerm_subnet.aks_subnet_network.id
@@ -69,6 +79,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
     ]
   }
   depends_on = [
-    azurerm_nat_gateway_public_ip_association.nat_gateway_public_ip
+    azurerm_nat_gateway_public_ip_association.nat_gateway_public_ip,
+    azurerm_subnet_nat_gateway_association.subnet_nat_gateway
   ]
 }
+
